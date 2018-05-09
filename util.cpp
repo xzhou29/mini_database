@@ -56,7 +56,7 @@ int util::compareChar(const char* str1, const char* str2){
         return 0;
     return 1;
 }
-bool util::PrintRecords(hsql::SelectStatement *stmt, vector<pair<string, column*>> cols, table* t){
+bool util::PrintRecords(hsql::SelectStatement *stmt, vector<pair<string, column*>> cols, table* t, int &selectvalue){
     ifstream os(t->getName(), ios::in|ios::binary);
 
     if(!os.is_open()){
@@ -75,6 +75,8 @@ bool util::PrintRecords(hsql::SelectStatement *stmt, vector<pair<string, column*
             cout <<left<<setw(col->element_size +2 > 8 ? col->element_size+2 : 8)<<setfill(' ')<<it.first;
     }
     cout << endl;
+
+    vector<int> printedrecords;
     //print records
     for(int i = 0; i < t->getRowlength(); i++){
 
@@ -219,6 +221,8 @@ bool util::PrintRecords(hsql::SelectStatement *stmt, vector<pair<string, column*
         //check duplicates
         bool duplicates = false;
         for(int j = 0; j<i; j++){
+            if(find(printedrecords.begin(), printedrecords.end(), j)== printedrecords.end())
+                continue;
             int count_duplicates = 0;
             int countcol = 0;
             for(auto it:cols){
@@ -244,8 +248,11 @@ bool util::PrintRecords(hsql::SelectStatement *stmt, vector<pair<string, column*
         }
         if(duplicates)
             continue;
+        //do print
+
         for(auto it:cols) {
             column *col = it.second;
+            printedrecords.push_back(i);
 
             if (col != NULL) {
 
@@ -254,8 +261,13 @@ bool util::PrintRecords(hsql::SelectStatement *stmt, vector<pair<string, column*
                 //cout << "bytes: " << bytes << " -- true size: " << col->element_truesize << endl;
                 os.read(bytes, col->element_truesize);
 
-                if ( col->flag == "INT")
+
+                if ( col->flag == "INT"){
                     cout << left << setw(8) << setfill(' ') << *(int *) bytes;
+                    selectvalue = *(int *) bytes;
+
+                }
+
                 else {
                     cout << left << setw(col->element_size + 2 > 8 ? col->element_size + 2 : 8)
                          << setfill(' ') << bytes;
@@ -270,6 +282,7 @@ bool util::PrintRecords(hsql::SelectStatement *stmt, vector<pair<string, column*
         cout << endl;
     }
     os.close();
+    return true;
 }
 bool util::PrintJoinRecords(hsql::SelectStatement *stmt, vector<pair<string, column *>> colsleft,
                             vector<pair<string, column *>> colsright, table *tleft, table *tright) {
